@@ -1,4 +1,23 @@
 import pymysql
+import subprocess
+
+def MySQL_status():
+    try:
+        result = subprocess.run(['sc', 'query', 'mysql'], capture_output=True, text=True)
+        if "RUNNING" in result.stdout:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"檢查 MySQL 狀態時發生錯誤: {e}")
+        return False
+
+def start_MySQL():
+    if not MySQL_status():
+        try:
+            subprocess.run(['net', 'start', 'mysql'], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"啟動 MySQL 伺服器時發生錯誤: {e}")
 
 connection = pymysql.connect(
     host='localhost',
@@ -33,9 +52,11 @@ def create_table():
     except Exception as e:
         print(f"創建資料表時發生錯誤: {e}")
 
-def delete_all_file(file_name: str):
+start_MySQL()
+create_table()
+
+def delete_all_file():
     try:
-        create_table()
         cursor = connection.cursor()
         
         SQL_delete_qurey = "DELETE FROM vector"
@@ -48,13 +69,27 @@ def delete_all_file(file_name: str):
         print(f"刪除檔案時發生錯誤: {e}")
 
     finally:
-        if connection.open:
+        if 'cursor' in locals() and cursor:
             cursor.close()
-            connection.close()
 
+def delete_file(file_path: str):
+    try:
+        cursor = connection.cursor()
+
+        SQL_delete_qurey = "DELETE FROM vector WHERE path = %s"
+        cursor.execute(SQL_delete_qurey, (file_path, ))
+        connection.commit()
+    
+    except pymysql.MySQLError as e:
+        print(f"刪除檔案時發生錯誤: {e}")
+    
+    finally:
+        if 'cursor' in locals() and cursor:
+            cursor.close()
+
+        
 def upload_SQL(names, embeddings, paths):
     try:
-        create_table()
         with connection.cursor() as cursor:
             for embedding, path, name in zip(embeddings, paths, names):
                 SQL = "INSERT INTO vector (name, embedding, path) VALUES (%s, %s, %s)"
@@ -64,5 +99,5 @@ def upload_SQL(names, embeddings, paths):
     except pymysql.MySQLError as e:
         print(f"上傳資料時發生錯誤: {e}")
 
-    finally:
-        connection.close()
+if connection.open:
+    connection.close()
