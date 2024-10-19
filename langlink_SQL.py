@@ -19,6 +19,7 @@ def start_MySQL():
         except subprocess.CalledProcessError as e:
             print(f"啟動 MySQL 伺服器時發生錯誤: {e}")
 
+# 全域連接
 connection = pymysql.connect(
     host='localhost',
     user='root',
@@ -36,7 +37,7 @@ def create_database():
 
 def create_table():
     try:
-        create_database()
+        create_database()  # 確保資料庫存在
         connection.select_db('langlink_SQL')
         
         with connection.cursor() as cursor:
@@ -72,12 +73,15 @@ def delete_all_file():
         if 'cursor' in locals() and cursor:
             cursor.close()
 
+        if connection.open:
+            connection.close()
+
 def delete_file(file_path: str):
     try:
         cursor = connection.cursor()
 
         SQL_delete_qurey = "DELETE FROM vector WHERE path = %s"
-        cursor.execute(SQL_delete_qurey, (file_path, ))
+        cursor.execute(SQL_delete_qurey, (file_path,))
         connection.commit()
     
     except pymysql.MySQLError as e:
@@ -87,17 +91,28 @@ def delete_file(file_path: str):
         if 'cursor' in locals() and cursor:
             cursor.close()
 
+        if connection.open:
+            connection.close()
         
 def upload_SQL(names, embeddings, paths):
     try:
         with connection.cursor() as cursor:
             for embedding, path, name in zip(embeddings, paths, names):
-                SQL = "INSERT INTO vector (name, embedding, path) VALUES (%s, %s, %s)"
+                SQL = """
+                INSERT INTO vector (name, embedding, path) 
+                VALUES (%s, %s, %s) 
+                ON DUPLICATE KEY UPDATE 
+                name = VALUES(name), 
+                embedding = VALUES(embedding)
+                """
                 cursor.execute(SQL, (name, path, str(embedding.tolist())))  # 將 embedding 轉為字符串
         connection.commit()
         
     except pymysql.MySQLError as e:
         print(f"上傳資料時發生錯誤: {e}")
 
-if connection.open:
-    connection.close()
+    finally:
+        if connection.open:
+            connection.close()
+
+
