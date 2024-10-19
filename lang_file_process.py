@@ -1,5 +1,5 @@
 import os
-from langlink_SQL import upload_SQL
+from langlink_SQL import upload_SQL , delete_all_file
 from sentence_transformers import SentenceTransformer
 model = SentenceTransformer('paraphrase-distilroberta-base-v1')
 
@@ -32,10 +32,9 @@ def read_file(file_path: str):
     except Exception as e:
         print(f"在讀取檔案時發生錯誤: {e}")
 
-
-
 texts, paths = read_all_file(r"G:\我的雲端硬碟\主資料庫")
 embeddings = model.encode(texts)
 names = [os.path.basename(path) for path in paths]
 
 upload_SQL(names, embeddings, paths)
+

@@ -33,6 +33,25 @@ def create_table():
     except Exception as e:
         print(f"創建資料表時發生錯誤: {e}")
 
+def delete_all_file(file_name: str):
+    try:
+        create_table()
+        cursor = connection.cursor()
+        
+        SQL_delete_qurey = "DELETE FROM vector"
+        cursor.execute(SQL_delete_qurey)
+
+        connection.commit()
+        print("所有檔案已成功刪除。")
+
+    except pymysql.MySQLError as e:
+        print(f"刪除檔案時發生錯誤: {e}")
+
+    finally:
+        if connection.open:
+            cursor.close()
+            connection.close()
+
 def upload_SQL(names, embeddings, paths):
     try:
         create_table()
